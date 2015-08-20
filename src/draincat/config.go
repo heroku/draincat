@@ -1,23 +1,22 @@
 package main
 
 import (
-	"log"
 	"github.com/kelseyhightower/envconfig"
+	"log"
 )
 
 // Note: the `default` tag must appear before `envconfig` for the default thing
 // to work.
 type Config struct {
-	Port        string `envconfig:"PORT"`
-	DatabaseUrl string `envconfig:"DATABASE_URL"`
+	Port string `envconfig:"PORT"`
+	Json bool   `envconfig:"DRAINCAT_JSON"`
 }
 
 var config Config
 
 func init() {
-	err := envconfig.Process("sql-drain", &config)
+	err := envconfig.Process("draincat", &config)
 	if err != nil {
 		log.Fatalf("Incomplete config: %v", err)
 	}
-	log.Printf("Config => %+v", config)
 }
