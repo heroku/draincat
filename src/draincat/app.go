@@ -13,27 +13,10 @@ type LogLine struct {
 	PrivalVersion, Time, HostName, Name, ProcID, MsgID, Data string
 }
 
-func handleLog(line LogLine) error {
-	if config.Json {
-		data, err := json.Marshal(&line)
-		if err != nil {
-			log.Fatalf("JSON error: %v", err)
-		}
-		fmt.Println(string(data))
-	} else {
-		fmt.Printf("==> %v, %v, %v, %v, %v, %v, %v",
-			line.PrivalVersion, line.Time, line.HostName, line.Name,
-			line.ProcID, line.MsgID, line.Data)
-	}
-	return nil
-}
-
-func routeLogs(w http.ResponseWriter, r *http.Request) {
-	lp := lpx.NewReader(bufio.NewReader(r.Body))
-	for lp.Next() {
+func NewLogLineFromLpx(lp *lpx.Reader) *LogLine {
 		hdr := lp.Header()
 		data := lp.Bytes()
-		err := handleLog(LogLine{
+		return &LogLine{
 			string(hdr.PrivalVersion),
 			string(hdr.Time),
 			string(hdr.Hostname),
@@ -41,16 +24,46 @@ func routeLogs(w http.ResponseWriter, r *http.Request) {
 			string(hdr.Procid),
 			string(hdr.Msgid),
 			string(data),
-		})
-		if err != nil {
-			// Fail abruptly as we do not know the appropriate response here.
-			log.Fatalf("Failed to handle a log line: %v\n", err)
 		}
+}
+
+var logsCh chan *LogLine
+
+func receiveLogs() {
+	for line := range logsCh {
+		err := handleLog(line)
+		if err != nil {
+			log.Fatalf("Error handling log: %v", err)
+		}
+	}
+}
+func handleLog(line *LogLine) error {
+	var err error
+	if config.Json {
+		data, err := json.Marshal(&line)
+		if err != nil {
+			log.Fatalf("JSON error: %v", err)
+		}
+		_, err = fmt.Println(string(data))
+	} else {
+		_, err = fmt.Printf("==> %v, %v, %v, %v, %v, %v, %v",
+			line.PrivalVersion, line.Time, line.HostName, line.Name,
+			line.ProcID, line.MsgID, line.Data)
+	}
+	return err
+}
+
+func routeLogs(w http.ResponseWriter, r *http.Request) {
+	lp := lpx.NewReader(bufio.NewReader(r.Body))
+	for lp.Next() {
+		logsCh <- NewLogLineFromLpx(lp)
 	}
 }
 
 func main() {
-	log.Printf("Running app on port %v\n", config.Port)
+	logsCh = make(chan *LogLine)
+	go receiveLogs()
+
 	http.HandleFunc("/logs", routeLogs)
 	http.ListenAndServe("0.0.0.0:"+config.Port, nil)
 }
