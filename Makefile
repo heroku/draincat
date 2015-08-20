@@ -1,5 +1,5 @@
 all:
-	go build
+	gb build
 
 deploy: all
 	git push -f heroku master

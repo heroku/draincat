@@ -1,1 +1,1 @@
-web: sql-drain
+web: bin/draincat
