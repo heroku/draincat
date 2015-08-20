@@ -1,0 +1,17 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/bmizerany/lpx",
+			"repository": "https://github.com/bmizerany/lpx",
+			"revision": "af85cf24c1567bcb5a2e4c21597cc049eab31f55",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/kelseyhightower/envconfig",
+			"repository": "https://github.com/kelseyhightower/envconfig",
+			"revision": "4e0792c28c6af6d74af7bac93eedb34a29107010",
+			"branch": "master"
+		}
+	]
+}

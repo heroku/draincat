@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"log"
-	_ "sql-drain/Godeps/_workspace/src/github.com/lib/pq"
 )
 
 var db *sql.DB

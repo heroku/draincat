@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"sql-drain/Godeps/_workspace/src/github.com/kelseyhightower/envconfig"
+	"github.com/kelseyhightower/envconfig"
 )
 
 // Note: the `default` tag must appear before `envconfig` for the default thing

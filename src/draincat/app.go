@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"log"
 	"net/http"
-	"sql-drain/Godeps/_workspace/src/github.com/bmizerany/lpx"
+	"github.com/bmizerany/lpx"
 )
 
 func logsHandler(w http.ResponseWriter, r *http.Request) {
