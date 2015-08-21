@@ -7,6 +7,7 @@ import (
 	"github.com/bmizerany/lpx"
 	"log"
 	"net/http"
+	"os"
 )
 
 type LogLine struct {
@@ -74,9 +75,16 @@ func routeLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	if config.Port == 0 {
+		fmt.Fprintln(os.Stderr, "err: invalid port")
+		os.Exit(2)
+	}
+
+	addr := fmt.Sprintf("0.0.0.0:%d", config.Port)
+
 	logsCh = make(chan []*LogLine, LOGSCH_BUFFER)
 	go receiveLogs()
 
 	http.HandleFunc("/logs", routeLogs)
-	http.ListenAndServe("0.0.0.0:"+config.Port, nil)
+	http.ListenAndServe(addr, nil)
 }

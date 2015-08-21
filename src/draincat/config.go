@@ -8,8 +8,8 @@ import (
 // Note: the `default` tag must appear before `envconfig` for the default thing
 // to work.
 type Config struct {
-	Port string `envconfig:"PORT"`
-	Json bool   `envconfig:"DRAINCAT_JSON"`
+	Port int  `envconfig:"PORT"`
+	Json bool `envconfig:"DRAINCAT_JSON"`
 }
 
 var config Config
