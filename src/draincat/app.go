@@ -33,13 +33,17 @@ func NewLogLineFromLpx(lp *lpx.Reader) *LogLine {
 	}
 }
 
-var logsCh chan *LogLine
+var logsCh chan []*LogLine
+
+const LOGSCH_BUFFER = 100
 
 func receiveLogs() {
-	for line := range logsCh {
-		err := handleLog(line)
-		if err != nil {
-			log.Fatalf("Error handling log: %v", err)
+	for logs := range logsCh {
+		for _, line := range logs {
+			err := handleLog(line)
+			if err != nil {
+				log.Fatalf("Error handling log: %v", err)
+			}
 		}
 	}
 }
@@ -62,13 +66,15 @@ func handleLog(line *LogLine) error {
 
 func routeLogs(w http.ResponseWriter, r *http.Request) {
 	lp := lpx.NewReader(bufio.NewReader(r.Body))
+	logs := make([]*LogLine, 0)
 	for lp.Next() {
-		logsCh <- NewLogLineFromLpx(lp)
+		logs = append(logs, NewLogLineFromLpx(lp))
 	}
+	logsCh <- logs
 }
 
 func main() {
-	logsCh = make(chan *LogLine)
+	logsCh = make(chan []*LogLine, LOGSCH_BUFFER)
 	go receiveLogs()
 
 	http.HandleFunc("/logs", routeLogs)
