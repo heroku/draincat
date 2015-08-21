@@ -86,5 +86,9 @@ func main() {
 	go receiveLogs()
 
 	http.HandleFunc("/logs", routeLogs)
-	http.ListenAndServe(addr, nil)
+	err := http.ListenAndServe(addr, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "http server failure: %v\n", err)
+		os.Exit(2)
+	}
 }
