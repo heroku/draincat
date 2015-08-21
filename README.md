@@ -18,7 +18,7 @@ bin/draincat > logs.txt
 ## TODO
 
 - [X] Multiplex simutaneous lpx frames using Go channels
-- [ ] Option to process multiple logs in single frame together?
+- [ ] Print logs in the same frame together (no interleaving with other frames)
 - [ ] Syslog drains (`draincat --type=syslog`)
 - [ ] metrics?
 - [X] JSON output  
