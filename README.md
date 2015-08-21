@@ -12,7 +12,7 @@ bin/draincat > logs.txt
 
 ## Features
 
-* JSON output `DRAINCAT_JSON=1`
+* JSON output (`DRAINCAT_JSON=1`)
 
 
 ## TODO
