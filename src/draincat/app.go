@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bmizerany/lpx"
+	"github.com/docopt/docopt-go"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 type LogLine struct {
@@ -38,10 +40,10 @@ var logsCh chan []*LogLine
 
 const LOGSCH_BUFFER = 100
 
-func receiveLogs() {
+func receiveLogs(useJson bool) {
 	for logs := range logsCh {
 		for _, line := range logs {
-			err := handleLog(line)
+			err := handleLog(line, useJson)
 			if err != nil {
 				log.Fatalf("Error handling log: %v", err)
 			}
@@ -49,16 +51,16 @@ func receiveLogs() {
 	}
 }
 
-func handleLog(line *LogLine) error {
+func handleLog(line *LogLine, useJson bool) error {
 	var err error
-	if config.Json {
+	if useJson {
 		data, err := json.Marshal(&line)
 		if err != nil {
 			log.Fatalf("JSON error: %v", err)
 		}
 		_, err = fmt.Println(string(data))
 	} else {
-		_, err = fmt.Printf("==> %v, %v, %v, %v, %v, %v, %v",
+		_, err = fmt.Printf("%v, %v, %v, %v, %v, %v, %v",
 			line.PrivalVersion, line.Time, line.HostName, line.Name,
 			line.ProcID, line.MsgID, line.Data)
 	}
@@ -75,18 +77,36 @@ func routeLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if config.Port == 0 {
-		fmt.Fprintln(os.Stderr, "err: invalid port")
+	usage := `draincat
+Usage:
+  draincat [-j] -p PORT
+Options:
+  -p PORT --port=PORT    HTTP port to listen
+  -j --json              Output log messages in JSON
+`
+
+	arguments, err := docopt.Parse(usage, nil, true, "draincat", false)
+	if err != nil {
+		log.Println(err.Error())
+		os.Exit(1)
+	}
+	fmt.Printf("%+v\n", arguments)
+	portString := arguments["--port"].(string)
+	useJson := arguments["--json"].(bool)
+
+	port, err := strconv.Atoi(portString)
+	if err != nil || port == 0 {
+		fmt.Fprintf(os.Stderr, "err: invalid port %s\n", portString)
 		os.Exit(2)
 	}
 
-	addr := fmt.Sprintf("0.0.0.0:%d", config.Port)
+	addr := fmt.Sprintf("0.0.0.0:%d", port)
 
 	logsCh = make(chan []*LogLine, LOGSCH_BUFFER)
-	go receiveLogs()
+	go receiveLogs(useJson)
 
 	http.HandleFunc("/logs", routeLogs)
-	err := http.ListenAndServe(addr, nil)
+	err = http.ListenAndServe(addr, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "http server failure: %v\n", err)
 		os.Exit(2)

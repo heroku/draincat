@@ -7,12 +7,12 @@ Like netcat but for Heroku logs.
 Spin up a HTTP drain and dump the logs to a file.
 
 ```
-bin/draincat > logs.txt
+bin/draincat -p 5000 > logs.txt
 ```
 
 ## Features
 
-* JSON output (`DRAINCAT_JSON=1`)
+* JSON output
 * Serial processing of logplex frames
 
 ## TODO

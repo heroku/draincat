@@ -8,9 +8,9 @@
 			"branch": "master"
 		},
 		{
-			"importpath": "github.com/kelseyhightower/envconfig",
-			"repository": "https://github.com/kelseyhightower/envconfig",
-			"revision": "4e0792c28c6af6d74af7bac93eedb34a29107010",
+			"importpath": "github.com/docopt/docopt-go",
+			"repository": "https://github.com/docopt/docopt-go",
+			"revision": "854c423c810880e30b9fecdabb12d54f4a92f9bb",
 			"branch": "master"
 		}
 	]
