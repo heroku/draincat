@@ -90,7 +90,6 @@ Options:
 		log.Println(err.Error())
 		os.Exit(1)
 	}
-	fmt.Printf("%+v\n", arguments)
 	portString := arguments["--port"].(string)
 	useJson := arguments["--json"].(bool)
 
