@@ -36,17 +36,15 @@ func NewLogLineFromLpx(lp *lpx.Reader) *LogLine {
 	}
 }
 
-var logsCh chan []*LogLine
+var logsCh chan *LogLine
 
 const LOGSCH_BUFFER = 100
 
 func receiveLogs(useJson bool) {
-	for logs := range logsCh {
-		for _, line := range logs {
-			err := handleLog(line, useJson)
-			if err != nil {
-				log.Fatalf("Error handling log: %v", err)
-			}
+	for line := range logsCh {
+		err := handleLog(line, useJson)
+		if err != nil {
+			log.Fatalf("Error handling log: %v", err)
 		}
 	}
 }
@@ -69,11 +67,9 @@ func handleLog(line *LogLine, useJson bool) error {
 
 func routeLogs(w http.ResponseWriter, r *http.Request) {
 	lp := lpx.NewReader(bufio.NewReader(r.Body))
-	logs := make([]*LogLine, 0)
 	for lp.Next() {
-		logs = append(logs, NewLogLineFromLpx(lp))
+		logsCh <- NewLogLineFromLpx(lp)
 	}
-	logsCh <- logs
 }
 
 func main() {
@@ -101,7 +97,7 @@ Options:
 
 	addr := fmt.Sprintf("0.0.0.0:%d", port)
 
-	logsCh = make(chan []*LogLine, LOGSCH_BUFFER)
+	logsCh = make(chan *LogLine, LOGSCH_BUFFER)
 	go receiveLogs(useJson)
 
 	http.HandleFunc("/logs", routeLogs)
