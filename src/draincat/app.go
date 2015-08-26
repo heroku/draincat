@@ -70,12 +70,12 @@ func handleLog(line *LogLine, useJson bool) error {
 var randomDelay bool
 
 func routeLogs(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(os.Stderr, "DEBUG: in request\n")
 	if randomDelay {
-		ms := time.Duration(250+rand.Intn(750)) * time.Millisecond
-		time.Sleep(ms * time.Millisecond)
-		fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
+		ms := randomSleep(250, 750)
+		// fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
 	} else {
-		fmt.Fprintf(os.Stderr, "DEBUG: no delay\n")
+		// fmt.Fprintf(os.Stderr, "DEBUG: no delay\n")
 	}
 	os.Stderr.Sync()
 
@@ -83,6 +83,12 @@ func routeLogs(w http.ResponseWriter, r *http.Request) {
 	for lp.Next() {
 		logsCh <- NewLogLineFromLpx(lp)
 	}
+}
+
+func randomSleep(start, rng int) time.Duration {
+	ms := time.Duration(time.Duration(start)*time.Millisecond + time.Duration(rand.Intn(rng))*time.Millisecond)
+	time.Sleep(ms)
+	return ms
 }
 
 func main() {
