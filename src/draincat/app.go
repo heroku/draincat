@@ -7,9 +7,11 @@ import (
 	"github.com/bmizerany/lpx"
 	"github.com/docopt/docopt-go"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 type LogLine struct {
@@ -65,7 +67,18 @@ func handleLog(line *LogLine, useJson bool) error {
 	return err
 }
 
+var randomDelay bool
+
 func routeLogs(w http.ResponseWriter, r *http.Request) {
+	if randomDelay {
+		ms := time.Duration(250+rand.Intn(750)) * time.Millisecond
+		time.Sleep(ms * time.Millisecond)
+		fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
+	} else {
+		fmt.Fprintf(os.Stderr, "DEBUG: no delay\n")
+	}
+	os.Stderr.Sync()
+
 	lp := lpx.NewReader(bufio.NewReader(r.Body))
 	for lp.Next() {
 		logsCh <- NewLogLineFromLpx(lp)
@@ -75,10 +88,11 @@ func routeLogs(w http.ResponseWriter, r *http.Request) {
 func main() {
 	usage := `draincat
 Usage:
-  draincat [-j] -p PORT
+  draincat [-j] [-D] -p PORT
 Options:
   -p PORT --port=PORT    HTTP port to listen
   -j --json              Output log messages in JSON
+  -D --random-delay      Handle responses with random delay
 `
 
 	arguments, err := docopt.Parse(usage, nil, true, "draincat", false)
@@ -88,6 +102,8 @@ Options:
 	}
 	portString := arguments["--port"].(string)
 	useJson := arguments["--json"].(bool)
+	randomDelay = arguments["--random-delay"].(bool)
+	fmt.Fprintf(os.Stderr, "DEBUG: Random delay? %v\n", randomDelay)
 
 	port, err := strconv.Atoi(portString)
 	if err != nil || port == 0 {
