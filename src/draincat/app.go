@@ -67,13 +67,14 @@ func handleLog(line *LogLine, useJson bool) error {
 	return err
 }
 
-var randomDelay bool
+var latency *Latency
 
 func routeLogs(w http.ResponseWriter, r *http.Request) {
 	// fmt.Fprintf(os.Stderr, "DEBUG: in request\n")
-	if randomDelay {
-		_ = randomSleep(250, 750)
-		// fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
+	if latency != nil {
+		ms := latency.Create()
+		time.Sleep(time.Duration(ms) * time.Millisecond)
+		fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
 	} else {
 		// fmt.Fprintf(os.Stderr, "DEBUG: no delay\n")
 	}
@@ -84,42 +85,50 @@ func routeLogs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func randomSleep(start, rng int) time.Duration {
-	ms := time.Duration(time.Duration(start)*time.Millisecond + time.Duration(rand.Intn(rng))*time.Millisecond)
-	time.Sleep(ms)
-	return ms
+func oops(err error) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func main() {
 	usage := `draincat
 Usage:
-  draincat [-j] [-D] -p PORT
+  draincat [-j] [-D PERC] -p PORT
 Options:
-  -p PORT --port=PORT    HTTP port to listen
-  -j --json              Output log messages in JSON
-  -D --random-delay      Handle responses with random delay
+  -p PORT --port=PORT                 HTTP port to listen
+  -j --json                           Output log messages in JSON
+  -D PERC --latency-percentiles=PERC  Handle responses with the given percentile delay
 `
 
 	arguments, err := docopt.Parse(usage, nil, true, "draincat", false)
 	if err != nil {
-		log.Println(err.Error())
-		os.Exit(1)
+		oops(err)
 	}
 	portString := arguments["--port"].(string)
 	useJson := arguments["--json"].(bool)
-	randomDelay = arguments["--random-delay"].(bool)
-	fmt.Fprintf(os.Stderr, "DEBUG: Random delay? %v\n", randomDelay)
+	latencyPercentiles, ok := arguments["--latency-percentiles"].(string)
+	if ok {
+		latency, err = NewLatencyFromSpec(latencyPercentiles)
+		if err != nil {
+			oops(fmt.Errorf("Invalid latency spec (%v): %v", latencyPercentiles, err))
+		} else {
+			fmt.Fprintf(os.Stderr, "WARNING: running draincat with latency distribution: %+v\n", latency)
+		}
+	}
 
 	port, err := strconv.Atoi(portString)
 	if err != nil || port == 0 {
-		fmt.Fprintf(os.Stderr, "err: invalid port %s\n", portString)
-		os.Exit(2)
+		oops(fmt.Errorf("err: invalid port %s\n", portString))
 	}
 
 	addr := fmt.Sprintf("0.0.0.0:%d", port)
 
 	logsCh = make(chan *LogLine, LOGSCH_BUFFER)
 	go receiveLogs(useJson)
+
+	rand.Seed(time.Now().Unix())
 
 	http.HandleFunc("/logs", routeLogs)
 	err = http.ListenAndServe(addr, nil)
