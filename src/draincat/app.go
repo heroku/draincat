@@ -77,7 +77,6 @@ func routeLogs(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// fmt.Fprintf(os.Stderr, "DEBUG: no delay\n")
 	}
-	os.Stderr.Sync()
 
 	lp := lpx.NewReader(bufio.NewReader(r.Body))
 	for lp.Next() {
