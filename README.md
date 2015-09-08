@@ -17,8 +17,7 @@ bin/draincat -p 5000 > logs.txt
 
 ## TODO
 
-- [X] Multiplex simutaneous lpx frames using Go channels
+- [X] JSON output  
 - [ ] Structured data field (from log-shuttle)
 - [ ] Syslog drains (`draincat --type=syslog`)
 - [ ] metrics?
-- [X] JSON output  
