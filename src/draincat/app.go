@@ -1,11 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/bmizerany/lpx"
 	"github.com/docopt/docopt-go"
+	"github.com/heroku/drain"
 	"log"
 	"math/rand"
 	"net/http"
@@ -14,36 +13,8 @@ import (
 	"time"
 )
 
-type LogLine struct {
-	PrivalVersion string `json:"priv"`
-	Time          string `json:"time"`
-	HostName      string `json:"hostname"`
-	Name          string `json:"name"`
-	ProcID        string `json:"procid"`
-	MsgID         string `json:"msgid"`
-	Data          string `json:"data"`
-}
-
-func NewLogLineFromLpx(lp *lpx.Reader) *LogLine {
-	hdr := lp.Header()
-	data := lp.Bytes()
-	return &LogLine{
-		string(hdr.PrivalVersion),
-		string(hdr.Time),
-		string(hdr.Hostname),
-		string(hdr.Name),
-		string(hdr.Procid),
-		string(hdr.Msgid),
-		string(data),
-	}
-}
-
-var logsCh chan *LogLine
-
-const LOGSCH_BUFFER = 100
-
-func receiveLogs(useJson bool) {
-	for line := range logsCh {
+func receiveLogs(d *drain.Drain, useJson bool) {
+	for line := range d.Logs() {
 		err := handleLog(line, useJson)
 		if err != nil {
 			log.Fatalf("Error handling log: %v", err)
@@ -51,7 +22,7 @@ func receiveLogs(useJson bool) {
 	}
 }
 
-func handleLog(line *LogLine, useJson bool) error {
+func handleLog(line *drain.LogLine, useJson bool) error {
 	var err error
 	if useJson {
 		data, err := json.Marshal(&line)
@@ -69,20 +40,15 @@ func handleLog(line *LogLine, useJson bool) error {
 
 var latency *Latency
 
-func routeLogs(w http.ResponseWriter, r *http.Request) {
-	// fmt.Fprintf(os.Stderr, "DEBUG: in request\n")
-	if latency != nil {
-		ms := latency.Create()
-		time.Sleep(time.Duration(ms) * time.Millisecond)
-		fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
-	} else {
-		// fmt.Fprintf(os.Stderr, "DEBUG: no delay\n")
-	}
-
-	lp := lpx.NewReader(bufio.NewReader(r.Body))
-	for lp.Next() {
-		logsCh <- NewLogLineFromLpx(lp)
-	}
+func latencyMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if latency != nil {
+			ms := latency.Create()
+			time.Sleep(time.Duration(ms) * time.Millisecond)
+			fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 func oops(err error) {
@@ -125,15 +91,15 @@ Options:
 
 	addr := fmt.Sprintf("0.0.0.0:%d", port)
 
-	logsCh = make(chan *LogLine, LOGSCH_BUFFER)
-	go receiveLogs(useJson)
+	theDrain := drain.NewDrain()
+	go receiveLogs(theDrain, useJson)
 
 	rand.Seed(time.Now().Unix())
 
-	http.HandleFunc("/logs", routeLogs)
+	logsHandler := latencyMiddleware(
+		http.HandlerFunc(theDrain.LogsHandler))
+
+	http.Handle("/logs", logsHandler)
 	err = http.ListenAndServe(addr, nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "http server failure: %v\n", err)
-		os.Exit(2)
-	}
+	oops(err)
 }

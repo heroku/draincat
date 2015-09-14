@@ -12,6 +12,12 @@
 			"repository": "https://github.com/docopt/docopt-go",
 			"revision": "854c423c810880e30b9fecdabb12d54f4a92f9bb",
 			"branch": "master"
+		},
+		{
+			"importpath": "github.com/heroku/drain",
+			"repository": "https://github.com/heroku/drain",
+			"revision": "d790972bb34f8e148269df71cd6fadb971c10805",
+			"branch": "master"
 		}
 	]
 }
