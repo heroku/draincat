@@ -38,15 +38,11 @@ func handleLog(line *drain.LogLine, useJson bool) error {
 	return err
 }
 
-var latency *Latency
-
-func latencyMiddleware(h http.Handler) http.Handler {
+func latencyMiddleware(latency *Latency, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if latency != nil {
-			ms := latency.Create()
-			time.Sleep(time.Duration(ms) * time.Millisecond)
-			fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
-		}
+		ms := latency.Create()
+		time.Sleep(time.Duration(ms) * time.Millisecond)
+		fmt.Fprintf(os.Stderr, "DEBUG: introduced %v delay in this response\n", ms)
 		h.ServeHTTP(w, r)
 	})
 }
@@ -75,6 +71,7 @@ Options:
 	portString := arguments["--port"].(string)
 	useJson := arguments["--json"].(bool)
 	latencyPercentiles, ok := arguments["--latency-percentiles"].(string)
+	var latency *Latency
 	if ok {
 		latency, err = NewLatencyFromSpec(latencyPercentiles)
 		if err != nil {
@@ -96,10 +93,13 @@ Options:
 
 	rand.Seed(time.Now().Unix())
 
-	logsHandler := latencyMiddleware(
-		http.HandlerFunc(theDrain.LogsHandler))
+	if latency != nil {
+		http.Handle("/logs", latencyMiddleware(
+			latency, http.HandlerFunc(theDrain.LogsHandler)))
+	} else {
+		http.HandleFunc("/logs", theDrain.LogsHandler)
+	}
 
-	http.Handle("/logs", logsHandler)
 	err = http.ListenAndServe(addr, nil)
 	oops(err)
 }
